@@ -1,0 +1,1145 @@
+> load("C:/University of Maastricht/Econometrics/EBC2090 - Tutorials/MDG_data.RData")
+> attach(MDG_data)
+> 
+> rm(list = ls())
+> ## Packages
+> library(lmtest)
+> library(sandwich)
+> library(car)
+> library(bootUR)
+> library(vars)
+> library(tseries)
+> library(ARDL)
+> ## Price deflators
+> PX <- XU / XO
+> PM <- MU / MO
+> ## Log transformations
+> lnPX <- log(PX)
+> lnPM <- log(PM)
+> lnToT <- lnPX - lnPM
+> ## First differences
+> dlnPX <- diff(lnPX)
+> dlnPM <- diff(lnPM)
+> dlnToT <- diff(lnToT)
+> ## Time series objects - CHECK START YEAR
+> start_year <- 1960
+> lnPX_ts <- ts(lnPX, start = start_year, frequency = 1)
+> lnPM_ts <- ts(lnPM, start = start_year, frequency = 1)
+> lnToT_ts <- ts(lnToT, start = start_year, frequency = 1)
+> dlnPX_ts <- ts(dlnPX, start = start_year + 1, frequency = 1)
+> dlnPM_ts <- ts(dlnPM, start = start_year + 1, frequency = 1)
+> n <- length(lnPX)
+> par(mfrow = c(2, 2))
+> ts.plot(lnPX_ts, main = "ln(PX)")
+> ts.plot(lnPM_ts, main = "ln(PM)")
+> ts.plot(lnPX_ts, lnPM_ts, col = c("blue", "red"), main = "ln(PX) vs ln(PM)")
+> legend("topleft", legend = c("ln(PX)", "ln(PM)"), col = c("blue", "red"), lty = 1)
+> ts.plot(lnToT_ts, main = "ln(ToT)")
+> abline(h = mean(lnToT), col = "red", lty = 2)
+> par(mfrow = c(1, 1))
+> ## Scatter
+> plot(lnPM, lnPX, main = "Scatter: ln(PX) vs ln(PM)", pch = 16)
+> abline(lm(lnPX ~ lnPM), col = "red", lwd = 2)
+> ## Growth rates
+> par(mfrow = c(1, 2))
+> ts.plot(dlnPX_ts, main = "Δln(PX)")
+> abline(h = 0, col = "red")
+> ts.plot(dlnPM_ts, main = "Δln(PM)")
+> abline(h = 0, col = "red")
+> par(mfrow = c(1, 1))
+> ## Levels - with trend
+> adf(lnPX, deterministics = "trend")
+
+	Two-step ADF test (with trend) on a single time series
+
+data: lnPX
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+     estimate largest root statistic p-value
+lnPX                0.9536    -1.024  0.9315
+
+> adf(lnPM, deterministics = "trend")
+
+	Two-step ADF test (with trend) on a single time series
+
+data: lnPM
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+     estimate largest root statistic p-value
+lnPM                0.9816   -0.5064  0.9802
+
+> adf(lnToT, deterministics = "intercept")
+
+	Two-step ADF test (with intercept) on a single time series
+
+data: lnToT
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+      estimate largest root statistic p-value
+lnToT                0.9146    -1.775  0.3884
+
+> ## Bootstrap union
+> boot_union(lnPX)
+Progress: |------------------| 
+          ********************
+
+	AWB bootstrap union test on a single time series
+
+data: lnPX
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+     estimate largest root statistic p-value
+lnPX                    NA   -0.3672  0.9625
+
+> boot_union(lnPM)
+Progress: |------------------| 
+          ********************
+
+	AWB bootstrap union test on a single time series
+
+data: lnPM
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+     estimate largest root statistic p-value
+lnPM                    NA   -0.3706   0.967
+
+> ## First differences
+> adf(dlnPX, deterministics = "intercept")
+
+	Two-step ADF test (with intercept) on a single time series
+
+data: dlnPX
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+      estimate largest root statistic p-value
+dlnPX                  0.64    -1.064  0.7229
+
+> adf(dlnPM, deterministics = "intercept")
+
+	Two-step ADF test (with intercept) on a single time series
+
+data: dlnPM
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+      estimate largest root statistic p-value
+dlnPM                0.6879    -1.116  0.7029
+
+> ## Second differences
+> adf(diff(dlnPX), deterministics = "intercept")
+
+	Two-step ADF test (with intercept) on a single time series
+
+data: diff(dlnPX)
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+            estimate largest root statistic   p-value
+diff(dlnPX)               -0.4262    -12.26 2.021e-11
+
+> adf(diff(dlnPM), deterministics = "intercept")
+
+	Two-step ADF test (with intercept) on a single time series
+
+data: diff(dlnPM)
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+            estimate largest root statistic   p-value
+diff(dlnPM)               -0.4295    -12.28 2.026e-11
+
+> ## Bootstrap union (1st difference)
+> boot_union(dlnPX)
+Progress: |------------------| 
+          ********************
+
+	AWB bootstrap union test on a single time series
+
+data: dlnPX
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+      estimate largest root statistic p-value
+dlnPX                    NA   -0.3713  0.9865
+
+> boot_union(dlnPM)
+Progress: |------------------| 
+          ********************
+
+	AWB bootstrap union test on a single time series
+
+data: dlnPM
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+      estimate largest root statistic p-value
+dlnPM                    NA   -0.3951   0.979
+
+> ## Bootstrap union (2nd difference)
+> boot_union(diff(dlnPX))
+Progress: |------------------| 
+          ********************
+
+	AWB bootstrap union test on a single time series
+
+data: diff(dlnPX)
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+            estimate largest root statistic p-value
+diff(dlnPX)                    NA    -4.094       0
+
+> boot_union(diff(dlnPM))
+Progress: |------------------| 
+          ********************
+
+	AWB bootstrap union test on a single time series
+
+data: diff(dlnPM)
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+            estimate largest root statistic p-value
+diff(dlnPM)                    NA    -4.652       0
+
+> ## 4A: Known cointegrating vector (ToT)
+> ts.plot(lnToT_ts, main = "Terms of Trade")
+> abline(h = mean(lnToT), col = "red", lty = 2)
+> adf(lnToT, deterministics = "intercept")
+
+	Two-step ADF test (with intercept) on a single time series
+
+data: lnToT
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+      estimate largest root statistic p-value
+lnToT                0.9146    -1.775  0.3884
+
+> ## 4B: Engle-Granger approach
+> fit_static <- lm(lnPX ~ lnPM)
+> summary(fit_static)
+
+Call:
+lm(formula = lnPX ~ lnPM)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-0.3985 -0.0505  0.0343  0.1073  0.3295 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -0.021996   0.031338  -0.702    0.485    
+lnPM         0.918733   0.007758 118.430   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1606 on 62 degrees of freedom
+Multiple R-squared:  0.9956,	Adjusted R-squared:  0.9955 
+F-statistic: 1.403e+04 on 1 and 62 DF,  p-value: < 2.2e-16
+
+> resid_EG <- fit_static$residuals
+> ts.plot(ts(resid_EG, start = start_year), main = "EG Residuals")
+> abline(h = 0, col = "red")
+> ## ADF on residuals (no deterministics)
+> adf(resid_EG, deterministics = "none")
+
+	Two-step ADF test (with none) on a single time series
+
+data: resid_EG
+null hypothesis: Series has a unit root
+alternative hypothesis: Series is stationary
+
+         estimate largest root statistic  p-value
+resid_EG                0.8017    -2.671 0.008507
+
+> ## Create lagged variables
+> lags_lnPX <- embed(lnPX, dimension = 2)
+> lags_lnPM <- embed(lnPM, dimension = 2)
+> lnPX_0 <- lags_lnPX[, 1]
+> lnPX_1 <- lags_lnPX[, 2]
+> lnPM_0 <- lags_lnPM[, 1]
+> lnPM_1 <- lags_lnPM[, 2]
+> n_ardl <- length(lnPX_0)
+> ## M1: ARDL(1,1) - General Model
+> fit_ardl11 <- lm(lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1)
+> summary(fit_ardl11)
+
+Call:
+lm(formula = lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.31785 -0.06905  0.01153  0.06690  0.19355 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.006954   0.020626   0.337    0.737    
+lnPM_0       0.842070   0.083196  10.122 1.63e-14 ***
+lnPM_1      -0.647851   0.117309  -5.523 7.89e-07 ***
+lnPX_1       0.790268   0.077067  10.254 9.95e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.09617 on 59 degrees of freedom
+Multiple R-squared:  0.9985,	Adjusted R-squared:  0.9984 
+F-statistic: 1.267e+04 on 3 and 59 DF,  p-value: < 2.2e-16
+
+> beta0_m1 <- coef(fit_ardl11)[1]
+> beta1_m1 <- coef(fit_ardl11)["lnPM_0"]
+> beta2_m1 <- coef(fit_ardl11)["lnPM_1"]
+> beta3_m1 <- coef(fit_ardl11)["lnPX_1"]
+> ## Multipliers
+> theta1_m1 <- beta1_m1
+> theta2_m1 <- beta1_m1 + beta2_m1 + beta3_m1 * beta1_m1
+> theta_inf_m1 <- (beta1_m1 + beta2_m1) / (1 - beta3_m1)
+> ## SE via theta-trick
+> nls_theta2_m1 <- nls(lnPX_0 ~ b0 + ((theta2 - b2)/(1 + b3))*lnPM_0 + b2*lnPM_1 + b3*lnPX_1,
++                      start = list(b0 = beta0_m1, theta2 = theta2_m1, b2 = beta2_m1, b3 = beta3_m1))
+> summary(nls_theta2_m1)
+
+Formula: lnPX_0 ~ b0 + ((theta2 - b2)/(1 + b3)) * lnPM_0 + b2 * lnPM_1 + 
+    b3 * lnPX_1
+
+Parameters:
+                Estimate Std. Error t value Pr(>|t|)    
+b0.(Intercept)  0.006954   0.020626   0.337    0.737    
+theta2.lnPM_0   0.859680   0.065715  13.082  < 2e-16 ***
+b2.lnPM_1      -0.647851   0.117309  -5.523 7.89e-07 ***
+b3.lnPX_1       0.790268   0.077067  10.254 9.95e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.09617 on 59 degrees of freedom
+
+Number of iterations to convergence: 0 
+Achieved convergence tolerance: 3.278e-08
+
+> nls_thetainf_m1 <- nls(lnPX_0 ~ b0 + (theta_inf*(1-b3) - b2)*lnPM_0 + b2*lnPM_1 + b3*lnPX_1,
++                        start = list(b0 = beta0_m1, theta_inf = theta_inf_m1, b2 = beta2_m1, b3 = beta3_m1))
+> summary(nls_thetainf_m1)
+
+Formula: lnPX_0 ~ b0 + (theta_inf * (1 - b3) - b2) * lnPM_0 + b2 * lnPM_1 + 
+    b3 * lnPX_1
+
+Parameters:
+                  Estimate Std. Error t value Pr(>|t|)    
+b0.(Intercept)    0.006954   0.020626   0.337    0.737    
+theta_inf.lnPM_0  0.926033   0.022767  40.675  < 2e-16 ***
+b2.lnPM_1        -0.647851   0.117309  -5.523 7.89e-07 ***
+b3.lnPX_1         0.790268   0.077067  10.254 9.95e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.09617 on 59 degrees of freedom
+
+Number of iterations to convergence: 0 
+Achieved convergence tolerance: 4.172e-08
+
+> ## M2: ARDL(0,1) - FDL
+> linearHypothesis(fit_ardl11, "lnPX_1 = 0", test = "F")
+
+Linear hypothesis test:
+lnPX_1 = 0
+
+Model 1: restricted model
+Model 2: lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1
+
+  Res.Df     RSS Df Sum of Sq      F    Pr(>F)    
+1     60 1.51821                                  
+2     59 0.54568  1   0.97252 105.15 9.953e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+> fit_ardl01 <- lm(lnPX_0 ~ lnPM_0 + lnPM_1)
+> summary(fit_ardl01)
+
+Call:
+lm(formula = lnPX_0 ~ lnPM_0 + lnPM_1)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.40744 -0.06072  0.02376  0.09912  0.41348 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 0.001803   0.034107   0.053    0.958    
+lnPM_0      0.704559   0.135810   5.188 2.65e-06 ***
+lnPM_1      0.214788   0.135233   1.588    0.117    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1591 on 60 degrees of freedom
+Multiple R-squared:  0.9957,	Adjusted R-squared:  0.9955 
+F-statistic:  6927 on 2 and 60 DF,  p-value: < 2.2e-16
+
+> beta1_m2 <- coef(fit_ardl01)["lnPM_0"]
+> beta2_m2 <- coef(fit_ardl01)["lnPM_1"]
+> theta1_m2 <- beta1_m2
+> theta2_m2 <- beta1_m2 + beta2_m2
+> theta_inf_m2 <- beta1_m2 + beta2_m2
+> linearHypothesis(fit_ardl01, "lnPM_0 + lnPM_1 = 0", test = "F")
+
+Linear hypothesis test:
+lnPM_0  + lnPM_1 = 0
+
+Model 1: restricted model
+Model 2: lnPX_0 ~ lnPM_0 + lnPM_1
+
+  Res.Df    RSS Df Sum of Sq     F    Pr(>F)    
+1     61 350.89                                 
+2     60   1.52  1    349.37 13807 < 2.2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+> ## M3: ARDL(1,0) - Partial Adjustment
+> linearHypothesis(fit_ardl11, "lnPM_1 = 0", test = "F")
+
+Linear hypothesis test:
+lnPM_1 = 0
+
+Model 1: restricted model
+Model 2: lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1
+
+  Res.Df     RSS Df Sum of Sq      F   Pr(>F)    
+1     60 0.82776                                 
+2     59 0.54568  1   0.28208 30.499 7.89e-07 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+> fit_ardl10 <- lm(lnPX_0 ~ lnPM_0 + lnPX_1)
+> summary(fit_ardl10)
+
+Call:
+lm(formula = lnPX_0 ~ lnPM_0 + lnPX_1)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.25866 -0.07540  0.00431  0.06635  0.40258 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.03756    0.02427   1.548    0.127    
+lnPM_0       0.47345    0.06065   7.806 1.05e-10 ***
+lnPX_1       0.48506    0.06560   7.394 5.31e-10 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1175 on 60 degrees of freedom
+Multiple R-squared:  0.9976,	Adjusted R-squared:  0.9976 
+F-statistic: 1.273e+04 on 2 and 60 DF,  p-value: < 2.2e-16
+
+> beta1_m3 <- coef(fit_ardl10)["lnPM_0"]
+> beta3_m3 <- coef(fit_ardl10)["lnPX_1"]
+> theta1_m3 <- beta1_m3
+> theta2_m3 <- beta1_m3 * (1 + beta3_m3)
+> theta_inf_m3 <- beta1_m3 / (1 - beta3_m3)
+> nls_thetainf_m3 <- nls(lnPX_0 ~ b0 + theta_inf*(1-b3)*lnPM_0 + b3*lnPX_1,
++                        start = list(b0 = coef(fit_ardl10)[1], theta_inf = theta_inf_m3, b3 = beta3_m3))
+> summary(nls_thetainf_m3)
+
+Formula: lnPX_0 ~ b0 + theta_inf * (1 - b3) * lnPM_0 + b3 * lnPX_1
+
+Parameters:
+                 Estimate Std. Error t value Pr(>|t|)    
+b0.(Intercept)    0.03756    0.02427   1.548    0.127    
+theta_inf.lnPM_0  0.91943    0.01121  82.031  < 2e-16 ***
+b3.lnPX_1         0.48506    0.06560   7.394 5.31e-10 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1175 on 60 degrees of freedom
+
+Number of iterations to convergence: 0 
+Achieved convergence tolerance: 2.181e-07
+
+> ## M4: Unit-Elasticity ECM
+> linearHypothesis(fit_ardl11, "lnPM_0 + lnPM_1 + lnPX_1 = 1", test = "F")
+
+Linear hypothesis test:
+lnPM_0  + lnPM_1  + lnPX_1 = 1
+
+Model 1: restricted model
+Model 2: lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1
+
+  Res.Df     RSS Df Sum of Sq      F  Pr(>F)  
+1     60 0.58117                              
+2     59 0.54568  1  0.035484 3.8366 0.05488 .
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+> dlnPX <- diff(lnPX)
+> dlnPM <- diff(lnPM)
+> ECT <- lnPX[-length(lnPX)] - lnPM[-length(lnPM)]
+> fit_ecm_unit <- lm(dlnPX ~ dlnPM + ECT)
+> summary(fit_ecm_unit)
+
+Call:
+lm(formula = dlnPX ~ dlnPM + ECT)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.32208 -0.06946  0.01906  0.06780  0.18669 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.02410    0.01911   1.261   0.2123    
+dlnPM        0.87297    0.08359  10.443 4.04e-15 ***
+ECT         -0.08866    0.04710  -1.882   0.0647 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.09842 on 60 degrees of freedom
+Multiple R-squared:  0.6536,	Adjusted R-squared:  0.6421 
+F-statistic: 56.62 on 2 and 60 DF,  p-value: 1.533e-14
+
+> alpha1_m4 <- coef(fit_ecm_unit)["dlnPM"]
+> delta_m4 <- coef(fit_ecm_unit)["ECT"]
+> ## M5: Growth Rates
+> linearHypothesis(fit_ardl11, c("lnPM_0 + lnPM_1 = 0", "lnPX_1 = 1"), test = "F")
+
+Linear hypothesis test:
+lnPM_0  + lnPM_1 = 0
+lnPX_1 = 1
+
+Model 1: restricted model
+Model 2: lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1
+
+  Res.Df     RSS Df Sum of Sq      F Pr(>F)  
+1     61 0.61548                             
+2     59 0.54568  2    0.0698 3.7734 0.0287 *
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+> fit_growth <- lm(dlnPX ~ dlnPM)
+> summary(fit_growth)
+
+Call:
+lm(formula = dlnPX ~ dlnPM)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.32249 -0.07949  0.00885  0.07733  0.16345 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 0.003077   0.015831   0.194    0.847    
+dlnPM       0.875410   0.085309  10.262 6.58e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1004 on 61 degrees of freedom
+Multiple R-squared:  0.6332,	Adjusted R-squared:  0.6272 
+F-statistic: 105.3 on 1 and 61 DF,  p-value: 6.577e-15
+
+> alpha1_m5 <- coef(fit_growth)["dlnPM"]
+> ## M6: Static Model
+> linearHypothesis(fit_ardl11, c("lnPM_1 = 0", "lnPX_1 = 0"), test = "F")
+
+Linear hypothesis test:
+lnPM_1 = 0
+lnPX_1 = 0
+
+Model 1: restricted model
+Model 2: lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1
+
+  Res.Df     RSS Df Sum of Sq      F    Pr(>F)    
+1     61 1.58204                                  
+2     59 0.54568  2    1.0364 56.026 2.306e-14 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+> fit_static_m6 <- lm(lnPX_0 ~ lnPM_0)
+> summary(fit_static_m6)
+
+Call:
+lm(formula = lnPX_0 ~ lnPM_0)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.39698 -0.04767  0.03330  0.10624  0.32878 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -0.020446   0.031483  -0.649    0.519    
+lnPM_0       0.919907   0.007913 116.253   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.161 on 61 degrees of freedom
+Multiple R-squared:  0.9955,	Adjusted R-squared:  0.9954 
+F-statistic: 1.351e+04 on 1 and 61 DF,  p-value: < 2.2e-16
+
+> beta1_m6 <- coef(fit_static_m6)["lnPM_0"]
+> data_ardl <- data.frame(lnPX = lnPX, lnPM = lnPM)
+> ## Auto-select ARDL order
+> ardl_auto <- auto_ardl(lnPX ~ lnPM, data = data_ardl, max_order = 4)
+> ardl_auto$best_order
+lnPX lnPM 
+   3    3 
+> ## Estimate and bounds test
+> ardl_model <- ardl_auto$best_model
+> summary(ardl_model)
+
+Time series regression with "ts" data:
+Start = 4, End = 64
+
+Call:
+dynlm::dynlm(formula = full_formula, data = data, start = start, 
+    end = end)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.205591 -0.044242  0.008024  0.043091  0.161421 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.03745    0.02085   1.796 0.078171 .  
+L(lnPX, 1)   0.67693    0.12079   5.604 7.67e-07 ***
+L(lnPX, 2)   0.38342    0.15117   2.536 0.014182 *  
+L(lnPX, 3)  -0.38969    0.11975  -3.254 0.001983 ** 
+lnPM         0.87560    0.07832  11.180 1.48e-15 ***
+L(lnPM, 1)  -0.77620    0.14850  -5.227 2.97e-06 ***
+L(lnPM, 2)  -0.33166    0.16770  -1.978 0.053170 .  
+L(lnPM, 3)   0.53390    0.13028   4.098 0.000143 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.08508 on 53 degrees of freedom
+Multiple R-squared:  0.9988,	Adjusted R-squared:  0.9987 
+F-statistic:  6437 on 7 and 53 DF,  p-value: < 2.2e-16
+
+> bounds_f_test(ardl_model, case = 3)
+
+	Bounds F-test (Wald) for no cointegration
+
+data:  d(lnPX) ~ L(lnPX, 1) + L(lnPM, 1) + d(L(lnPX, 1)) + d(L(lnPX,     2)) + d(lnPM) + d(L(lnPM, 1)) + d(L(lnPM, 2))
+F = 8.594, p-value = 0.005505
+alternative hypothesis: Possible cointegration
+null values:
+   k    T 
+   1 1000 
+
+> ## ECM form
+> ecm_model <- recm(ardl_model, case = 3)
+> summary(ecm_model)
+
+Time series regression with "zooreg" data:
+Start = 4, End = 64
+
+Call:
+dynlm::dynlm(formula = full_formula, data = data, start = start, 
+    end = end)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.205591 -0.044242  0.008024  0.043091  0.161421 
+
+Coefficients:
+               Estimate Std. Error t value Pr(>|t|)    
+(Intercept)    0.037452   0.017143   2.185 0.033274 *  
+d(L(lnPX, 1))  0.006272   0.122391   0.051 0.959322    
+d(L(lnPX, 2))  0.389693   0.118445   3.290 0.001768 ** 
+d(lnPM)        0.875605   0.076871  11.391 5.58e-16 ***
+d(L(lnPM, 1)) -0.202246   0.137795  -1.468 0.147979    
+d(L(lnPM, 2)) -0.533903   0.128887  -4.142 0.000122 ***
+ect           -0.329341   0.078700  -4.185 0.000106 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.08429 on 54 degrees of freedom
+  (0 observations deleted due to missingness)
+Multiple R-squared:  0.7615,	Adjusted R-squared:  0.735 
+F-statistic: 28.74 on 6 and 54 DF,  p-value: 3.732e-15
+
+> ## Heteroskedasticity
+> bptest(fit_ardl11, varformula = ~ lnPM_0 + lnPM_1 + lnPX_1)
+
+	studentized Breusch-Pagan test
+
+data:  fit_ardl11
+BP = 2.6554, df = 3, p-value = 0.4479
+
+> bptest(fit_ardl11, varformula = ~ lnPM_0 + lnPM_1 + lnPX_1 + 
++          I(lnPM_0^2) + I(lnPM_1^2) + I(lnPX_1^2) +
++          lnPM_0*lnPM_1 + lnPM_0*lnPX_1 + lnPM_1*lnPX_1)
+
+	studentized Breusch-Pagan test
+
+data:  fit_ardl11
+BP = 9.1496, df = 9, p-value = 0.4236
+
+> ## Autocorrelation
+> resid_ardl <- fit_ardl11$residuals
+> ts.plot(resid_ardl, main = "ARDL(1,1) Residuals")
+> abline(h = 0, col = "red")
+> acf(resid_ardl)
+> k_lb <- round(sqrt(n_ardl))
+> Box.test(resid_ardl, type = "Ljung-Box", lag = k_lb, fitdf = 4)
+
+	Box-Ljung test
+
+data:  resid_ardl
+X-squared = 19.208, df = 4, p-value = 0.0007153
+
+> bgtest(fit_ardl11, order = 2)
+
+	Breusch-Godfrey test for serial correlation of order up to 2
+
+data:  fit_ardl11
+LM test = 4.7116, df = 2, p-value = 0.09482
+
+> bgtest(fit_ardl11, order = 4)
+
+	Breusch-Godfrey test for serial correlation of order up to 4
+
+data:  fit_ardl11
+LM test = 8.6719, df = 4, p-value = 0.06985
+
+> ts.plot(ardl_model$residuals, main = "ARDL(3,3) Residuals")
+> abline(h = 0, col = "red")
+> acf(ardl_model$residuals)
+> Box.test(ardl_model$residuals, type = 
++            "Ljung-Box", lag = k_lb, fitdf = 4)
+
+	Box-Ljung test
+
+data:  ardl_model$residuals
+X-squared = 4.5648, df = 4, p-value = 0.3349
+
+> bgtest(ardl_model, order = 1)
+
+	Breusch-Godfrey test for serial correlation of order up to 1
+
+data:  ardl_model
+LM test = 0.0042969, df = 1, p-value = 0.9477
+
+> bgtest(ardl_model, order = 4)
+
+	Breusch-Godfrey test for serial correlation of order up to 4
+
+data:  ardl_model
+LM test = 7.9449, df = 4, p-value = 0.09362
+
+> ## Normality
+> jarque.bera.test(resid_ardl)
+
+	Jarque Bera Test
+
+data:  resid_ardl
+X-squared = 4.2164, df = 2, p-value = 0.1215
+
+> hist(resid_ardl, breaks = 15, col = "lightblue", freq = FALSE)
+> lines(density(resid_ardl), col = "red", lwd = 2)
+> ## Normality ARDL(3,3)
+> jarque.bera.test(ardl_model$residuals)
+
+	Jarque Bera Test
+
+data:  ardl_model$residuals
+X-squared = 1.0144, df = 2, p-value = 0.6022
+
+> hist(ardl_model$residuals, breaks = 10, col = "lightblue", freq = FALSE)
+> lines(density(resid_ardl), col = "red", lwd = 2)
+> ## RESET
+> resettest(fit_ardl11)
+
+	RESET test
+
+data:  fit_ardl11
+RESET = 1.1385, df1 = 2, df2 = 57, p-value = 0.3275
+
+> ## RESET ARDL(3,3)
+> resettest(ardl_model)
+
+	RESET test
+
+data:  ardl_model
+RESET = 0.33804, df1 = 2, df2 = 51, p-value = 0.7147
+
+> ## Robust SEs
+> coeftest(fit_ardl11)
+
+t test of coefficients:
+
+              Estimate Std. Error t value  Pr(>|t|)    
+(Intercept)  0.0069543  0.0206265  0.3372    0.7372    
+lnPM_0       0.8420699  0.0831958 10.1215 1.632e-14 ***
+lnPM_1      -0.6478509  0.1173094 -5.5226 7.890e-07 ***
+lnPX_1       0.7902678  0.0770670 10.2543 9.953e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+> coeftest(fit_ardl11, vcov = vcovHAC(fit_ardl11))
+
+t test of coefficients:
+
+              Estimate Std. Error t value  Pr(>|t|)    
+(Intercept)  0.0069543  0.0164726  0.4222    0.6744    
+lnPM_0       0.8420699  0.0924411  9.1093 7.515e-13 ***
+lnPM_1      -0.6478509  0.1333933 -4.8567 9.154e-06 ***
+lnPX_1       0.7902678  0.0779935 10.1325 1.567e-14 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+> ## Structural Break - ADJUST YEAR
+> break_year <- 1989
+> break_obs <- break_year - start_year
+> SSR_full <- sum(fit_ardl11$residuals^2)
+> lnPX_0_sub1 <- lnPX_0[1:(break_obs-1)]
+> lnPM_0_sub1 <- lnPM_0[1:(break_obs-1)]
+> lnPM_1_sub1 <- lnPM_1[1:(break_obs-1)]
+> lnPX_1_sub1 <- lnPX_1[1:(break_obs-1)]
+> fit_sub1 <- lm(lnPX_0_sub1 ~ lnPM_0_sub1 + lnPM_1_sub1 + lnPX_1_sub1)
+> lnPX_0_sub2 <- lnPX_0[break_obs:n_ardl]
+> lnPM_0_sub2 <- lnPM_0[break_obs:n_ardl]
+> lnPM_1_sub2 <- lnPM_1[break_obs:n_ardl]
+> lnPX_1_sub2 <- lnPX_1[break_obs:n_ardl]
+> fit_sub2 <- lm(lnPX_0_sub2 ~ lnPM_0_sub2 + lnPM_1_sub2 + lnPX_1_sub2)
+> coef(fit_ardl11)
+ (Intercept)       lnPM_0       lnPM_1       lnPX_1 
+ 0.006954312  0.842069893 -0.647850919  0.790267813 
+> coef(fit_sub1)
+(Intercept) lnPM_0_sub1 lnPM_1_sub1 lnPX_1_sub1 
+ 0.01145419  0.80037988 -0.54061363  0.71741203 
+> coef(fit_sub2)
+(Intercept) lnPM_0_sub2 lnPM_1_sub2 lnPX_1_sub2 
+ 0.04643871  1.00903743 -0.54114133  0.56657223 
+> SSR_sub1 <- sum(fit_sub1$residuals^2)
+> SSR_sub2 <- sum(fit_sub2$residuals^2)
+> SSR_ur <- SSR_sub1 + SSR_sub2
+> k <- 4
+> F_chow <- ((SSR_full - SSR_ur) / k) / (SSR_ur / (n_ardl - 2*k))
+> p_chow <- 1 - pf(F_chow, k, n_ardl - 2*k)
+> F_chow
+[1] 2.042466
+> p_chow
+[1] 0.1010633
+> ## Dummy approach
+> dummy <- c(rep(0, break_obs - 1), rep(1, n_ardl - break_obs + 1))
+> lnPM_0_dum <- lnPM_0 * dummy
+> lnPM_1_dum <- lnPM_1 * dummy
+> lnPX_1_dum <- lnPX_1 * dummy
+> fit_dummy <- lm(lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1 + dummy + lnPM_0_dum + lnPM_1_dum + lnPX_1_dum)
+> summary(fit_dummy)
+
+Call:
+lm(formula = lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1 + dummy + lnPM_0_dum + 
+    lnPM_1_dum + lnPX_1_dum)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.190623 -0.076264  0.005064  0.051841  0.196624 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.0114542  0.1481062   0.077  0.93864    
+lnPM_0       0.8003799  0.1420358   5.635 6.20e-07 ***
+lnPM_1      -0.5406136  0.1896094  -2.851  0.00612 ** 
+lnPX_1       0.7174120  0.1571423   4.565 2.85e-05 ***
+dummy        0.0349845  0.1503025   0.233  0.81681    
+lnPM_0_dum   0.2086575  0.1866840   1.118  0.26855    
+lnPM_1_dum  -0.0005277  0.2487444  -0.002  0.99831    
+lnPX_1_dum  -0.1508398  0.2021648  -0.746  0.45877    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.09294 on 55 degrees of freedom
+Multiple R-squared:  0.9987,	Adjusted R-squared:  0.9985 
+F-statistic:  5815 on 7 and 55 DF,  p-value: < 2.2e-16
+
+> linearHypothesis(fit_dummy, c("dummy = 0", "lnPM_0_dum = 0", "lnPM_1_dum = 0", "lnPX_1_dum = 0"), test = "F")
+
+Linear hypothesis test:
+dummy = 0
+lnPM_0_dum = 0
+lnPM_1_dum = 0
+lnPX_1_dum = 0
+
+Model 1: restricted model
+Model 2: lnPX_0 ~ lnPM_0 + lnPM_1 + lnPX_1 + dummy + lnPM_0_dum + lnPM_1_dum + 
+    lnPX_1_dum
+
+  Res.Df     RSS Df Sum of Sq      F Pr(>F)
+1     59 0.54568                           
+2     55 0.47511  4  0.070574 2.0425 0.1011
+> VAR_data <- data.frame(dlnPX_ts, dlnPM_ts)
+> ## Lag selection
+> VARselect(VAR_data, lag.max = 8)
+$selection
+AIC(n)  HQ(n)  SC(n) FPE(n) 
+     2      1      1      2 
+
+$criteria
+                   1             2             3             4             5
+AIC(n) -8.2359987951 -8.2421956221 -8.2184587699 -8.1034637955 -8.0322666071
+HQ(n)  -8.1513167633 -8.1010589025 -8.0208673624 -7.8494177002 -7.7217658239
+SC(n)  -8.0170169931 -7.8772259521 -7.7075012319 -7.4465183894 -7.2293333330
+FPE(n)  0.0002649997  0.0002635707  0.0002703798  0.0003042911  0.0003283809
+                   6             7           8
+AIC(n) -8.0085456713 -7.9863105973 -7.89890795
+HQ(n)  -7.6415902003 -7.5629004384 -7.41904310
+SC(n)  -7.0596245292 -6.8914015872 -6.65801107
+FPE(n)  0.0003387243  0.0003498563  0.00038699
+
+> ## VAR(1)
+> fit_var1 <- VAR(VAR_data, p = 1)
+> summary(fit_var1)
+
+VAR Estimation Results:
+========================= 
+Endogenous variables: dlnPX_ts, dlnPM_ts 
+Deterministic variables: const 
+Sample size: 62 
+Log Likelihood: 90.102 
+Roots of the characteristic polynomial:
+0.08039 0.08039
+Call:
+VAR(y = VAR_data, p = 1)
+
+
+Estimation results for equation dlnPX_ts: 
+========================================= 
+dlnPX_ts = dlnPX_ts.l1 + dlnPM_ts.l1 + const 
+
+            Estimate Std. Error t value Pr(>|t|)    
+dlnPX_ts.l1  0.12164    0.21060   0.578 0.565733    
+dlnPM_ts.l1 -0.07285    0.23143  -0.315 0.754046    
+const        0.10037    0.02634   3.810 0.000334 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 0.165 on 59 degrees of freedom
+Multiple R-Squared: 0.006558,	Adjusted R-squared: -0.02712 
+F-statistic: 0.1947 on 2 and 59 DF,  p-value: 0.8236 
+
+
+Estimation results for equation dlnPM_ts: 
+========================================= 
+dlnPM_ts = dlnPX_ts.l1 + dlnPM_ts.l1 + const 
+
+            Estimate Std. Error t value Pr(>|t|)    
+dlnPX_ts.l1  0.33342    0.18760   1.777 0.080672 .  
+dlnPM_ts.l1 -0.14655    0.20615  -0.711 0.479971    
+const        0.09575    0.02347   4.080 0.000137 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 0.147 on 59 degrees of freedom
+Multiple R-Squared: 0.07062,	Adjusted R-squared: 0.03912 
+F-statistic: 2.242 on 2 and 59 DF,  p-value: 0.1153 
+
+
+
+Covariance matrix of residuals:
+         dlnPX_ts dlnPM_ts
+dlnPX_ts  0.02723  0.01953
+dlnPM_ts  0.01953  0.02161
+
+Correlation matrix of residuals:
+         dlnPX_ts dlnPM_ts
+dlnPX_ts   1.0000   0.8051
+dlnPM_ts   0.8051   1.0000
+
+
+> ## VAR with optimal lag
+> optimal_p <- VARselect(VAR_data)$selection["AIC(n)"]
+> fit_var_opt <- VAR(VAR_data, p = optimal_p)
+> summary(fit_var_opt)
+
+VAR Estimation Results:
+========================= 
+Endogenous variables: dlnPX_ts, dlnPM_ts 
+Deterministic variables: const 
+Sample size: 62 
+Log Likelihood: 90.102 
+Roots of the characteristic polynomial:
+0.08039 0.08039
+Call:
+VAR(y = VAR_data, p = optimal_p)
+
+
+Estimation results for equation dlnPX_ts: 
+========================================= 
+dlnPX_ts = dlnPX_ts.l1 + dlnPM_ts.l1 + const 
+
+            Estimate Std. Error t value Pr(>|t|)    
+dlnPX_ts.l1  0.12164    0.21060   0.578 0.565733    
+dlnPM_ts.l1 -0.07285    0.23143  -0.315 0.754046    
+const        0.10037    0.02634   3.810 0.000334 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 0.165 on 59 degrees of freedom
+Multiple R-Squared: 0.006558,	Adjusted R-squared: -0.02712 
+F-statistic: 0.1947 on 2 and 59 DF,  p-value: 0.8236 
+
+
+Estimation results for equation dlnPM_ts: 
+========================================= 
+dlnPM_ts = dlnPX_ts.l1 + dlnPM_ts.l1 + const 
+
+            Estimate Std. Error t value Pr(>|t|)    
+dlnPX_ts.l1  0.33342    0.18760   1.777 0.080672 .  
+dlnPM_ts.l1 -0.14655    0.20615  -0.711 0.479971    
+const        0.09575    0.02347   4.080 0.000137 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 0.147 on 59 degrees of freedom
+Multiple R-Squared: 0.07062,	Adjusted R-squared: 0.03912 
+F-statistic: 2.242 on 2 and 59 DF,  p-value: 0.1153 
+
+
+
+Covariance matrix of residuals:
+         dlnPX_ts dlnPM_ts
+dlnPX_ts  0.02723  0.01953
+dlnPM_ts  0.01953  0.02161
+
+Correlation matrix of residuals:
+         dlnPX_ts dlnPM_ts
+dlnPX_ts   1.0000   0.8051
+dlnPM_ts   0.8051   1.0000
+
+
+> ## Residual diagnostics
+> resid_var <- resid(fit_var_opt)
+> par(mfrow = c(2, 2))
+> ts.plot(resid_var[,1], main = "Resid: Δln(PX)")
+> abline(h = 0, col = "red")
+> ts.plot(resid_var[,2], main = "Resid: Δln(PM)")
+> abline(h = 0, col = "red")
+> acf(resid_var[,1], main = "ACF Δln(PX)")
+> acf(resid_var[,2], main = "ACF Δln(PM)")
+> par(mfrow = c(1, 1))
+> ccf(resid_var[,1], resid_var[,2], main = "CCF residuals")
+> ## Granger causality
+> causality(fit_var_opt, cause = "dlnPM_ts")$Granger
+
+	Granger causality H0: dlnPM_ts do not Granger-cause dlnPX_ts
+
+data:  VAR object fit_var_opt
+F-Test = 0.09908, df1 = 1, df2 = 118, p-value = 0.7535
+
+> causality(fit_var_opt, cause = "dlnPX_ts")$Granger
+
+	Granger causality H0: dlnPX_ts do not Granger-cause dlnPM_ts
+
+data:  VAR object fit_var_opt
+F-Test = 3.1588, df1 = 1, df2 = 118, p-value = 0.07809
+
+> ## IRFs
+> irf_results <- irf(fit_var_opt, n.ahead = 5, ortho = FALSE)
+> plot(irf_results)
+Hit <Return> to see next plot: theta1_m1
+> theta2_m1
+   lnPM_0 
+0.8596797 
+> theta_inf_m1
+   lnPM_0 
+0.9260332 
+> theta1_m2
+   lnPM_0 
+0.7045595 
+> theta2_m2
+   lnPM_0 
+0.9193475 
+> theta_inf_m2
+   lnPM_0 
+0.9193475 
+> theta1_m3
+   lnPM_0 
+0.4734539 
+> theta2_m3
+   lnPM_0 
+0.7031056 
+> theta_inf_m3
+   lnPM_0 
+0.9194282 
+> alpha1_m4
+    dlnPM 
+0.8729738 
+> delta_m4
+        ECT 
+-0.08865899 
+> alpha1_m5
+    dlnPM 
+0.8754102 
+> beta1_m6
+   lnPM_0 
+0.9199065 
+> ## residuals from ARDL(3,3)
+> resid_ardl33 <- residuals(ardl_model)
+> ## Get the aligned data (ARDL(3,3) loses 3 obs)
+> n33 <- length(resid_ardl33)
+> lnPX_0_33 <- lnPX[4:64]
+> lnPX_1_33 <- lnPX[3:63]
+> lnPX_2_33 <- lnPX[2:62]
+> lnPX_3_33 <- lnPX[1:61]
+> lnPM_0_33 <- lnPM[4:64]
+> lnPM_1_33 <- lnPM[3:63]
+> lnPM_2_33 <- lnPM[2:62]
+> lnPM_3_33 <- lnPM[1:61]
+> ## Refit for bptest compatibility
+> fit_ardl33_lm <- lm(lnPX_0_33 ~ lnPM_0_33 + lnPM_1_33 + lnPM_2_33 + lnPM_3_33 + 
++                       lnPX_1_33 + lnPX_2_33 + lnPX_3_33)
+> summary(fit_ardl33_lm)
+
+Call:
+lm(formula = lnPX_0_33 ~ lnPM_0_33 + lnPM_1_33 + lnPM_2_33 + 
+    lnPM_3_33 + lnPX_1_33 + lnPX_2_33 + lnPX_3_33)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.205591 -0.044242  0.008024  0.043091  0.161421 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.03745    0.02085   1.796 0.078171 .  
+lnPM_0_33    0.87560    0.07832  11.180 1.48e-15 ***
+lnPM_1_33   -0.77620    0.14850  -5.227 2.97e-06 ***
+lnPM_2_33   -0.33166    0.16770  -1.978 0.053170 .  
+lnPM_3_33    0.53390    0.13028   4.098 0.000143 ***
+lnPX_1_33    0.67693    0.12079   5.604 7.67e-07 ***
+lnPX_2_33    0.38342    0.15117   2.536 0.014182 *  
+lnPX_3_33   -0.38969    0.11975  -3.254 0.001983 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.08508 on 53 degrees of freedom
+Multiple R-squared:  0.9988,	Adjusted R-squared:  0.9987 
+F-statistic:  6437 on 7 and 53 DF,  p-value: < 2.2e-16
+
+> ## Breusch-Pagan
+> bptest(fit_ardl33_lm, varformula = ~ lnPM_0_33 + lnPM_1_33 + lnPM_2_33 + lnPM_3_33 + 
++          lnPX_1_33 + lnPX_2_33 + lnPX_3_33)
+
+	studentized Breusch-Pagan test
+
+data:  fit_ardl33_lm
+BP = 1.3806, df = 7, p-value = 0.9862
+
+> ## White test
+> bptest(fit_ardl33_lm, varformula = ~ lnPM_0_33 + lnPM_1_33 + lnPM_2_33 + lnPM_3_33 + 
++          lnPX_1_33 + lnPX_2_33 + lnPX_3_33 +
++          I(lnPM_0_33^2) + I(lnPM_1_33^2) + I(lnPM_2_33^2) + I(lnPM_3_33^2) +
++          I(lnPX_1_33^2) + I(lnPX_2_33^2) + I(lnPX_3_33^2) +
++          lnPM_0_33*lnPM_1_33 + lnPM_0_33*lnPM_2_33 + lnPM_0_33*lnPM_3_33 +
++          lnPM_0_33*lnPX_1_33 + lnPM_0_33*lnPX_2_33 + lnPM_0_33*lnPX_3_33 +
++          lnPM_1_33*lnPM_2_33 + lnPM_1_33*lnPM_3_33 +
++          lnPM_1_33*lnPX_1_33 + lnPM_1_33*lnPX_2_33 + lnPM_1_33*lnPX_3_33 +
++          lnPM_2_33*lnPM_3_33 +
++          lnPM_2_33*lnPX_1_33 + lnPM_2_33*lnPX_2_33 + lnPM_2_33*lnPX_3_33 +
++          lnPM_3_33*lnPX_1_33 + lnPM_3_33*lnPX_2_33 + lnPM_3_33*lnPX_3_33 +
++          lnPX_1_33*lnPX_2_33 + lnPX_1_33*lnPX_3_33 +
++          lnPX_2_33*lnPX_3_33)
+
+	studentized Breusch-Pagan test
+
+data:  fit_ardl33_lm
+BP = 45.588, df = 35, p-value = 0.1085
