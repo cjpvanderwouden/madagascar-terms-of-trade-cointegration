@@ -1,6 +1,6 @@
 # Madagascar Terms of Trade: Cointegration Analysis
 
-Replication code for EBC2090 Empirical Econometrics paper examining export-import price cointegration in Madagascar (1960-2023).
+Replication code for EBC2090 Empirical Econometrics paper examining export-import price cointegration in Madagascar (1960-2023). _(Appendix A)_
 
 ## Methods
 - ADF & bootstrap union unit root tests
