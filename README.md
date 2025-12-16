@@ -10,4 +10,4 @@ Replication code for EBC2090 Empirical Econometrics paper examining export-impor
 
 
 ## Author
-Casper J.P. van der Wouden — Maastricht University
+Casper J.P. van der Wouden - Maastricht University
